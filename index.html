@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pomodoro Timer with Fishing Mini Game</title>
+<style>
+/* 全体背景とフォント */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+  color: #333;
+}
+
+/* タイトル */
+h1 {
+  font-size: 42px;
+  color: #1a73e8;
+  margin-top: 40px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+/* タイマー */
+#timer {
+  font-size: 80px;
+  margin: 20px 0;
+  color: #ff5722;
+  font-weight: bold;
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  background: radial-gradient(circle, #fff3e0 0%, #ffe0b2 100%);
+  display: inline-block;
+  padding: 20px 40px;
+  border-radius: 30px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+/* 入力欄 */
+input[type="number"] {
+  width: 80px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  text-align: center;
+  margin-right: 10px;
+}
+
+/* ボタン */
+button {
+  margin: 5px;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 20px;
+  border: none;
+  background: #1a73e8;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: 0.2s;
+}
+button:hover {
+  background: #1669c1;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+}
+
+/* トグルスイッチ風 */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin-left:10px;
+}
+.switch input { display:none; }
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px; width: 26px;
+  left: 4px; bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider { background-color: #1a73e8; }
+input:checked + .slider:before { transform: translateX(26px); }
+
+/* アニメーションエリア */
+#animation-area {
+  position: relative;
+  height: 300px;
+  width: 100%;
+  overflow: visible;
+  margin-top: 20px;
+}
+
+/* 飛ぶ魚 */
+.fish-fly {
+  position: absolute;
+  font-size: 36px;
+  pointer-events: none;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+}
+
+/* コレクション */
+#collection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.collection-item {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  font-size: 32px;
+  transition: transform 0.2s;
+}
+.collection-item:hover { transform: scale(1.2); }
+
+.normal { color: #333; }
+.rare { color: #2196f3; }
+.super-rare { color: #ff9800; }
+
+/* 釣果ログ */
+#fish-log {
+  margin-top: 20px;
+  max-height: 100px;
+  overflow-y: auto;
+  padding: 0 10px;
+  text-align: left;
+}
+#fish-log div { margin:2px 0; }
+</style>
+</head>
+<body>
+
+<h1>Pomodoro Timer with Fishing Mini Game</h1>
+
+<div>
+  <input type="number" id="custom-time" placeholder="分" min="1">
+  <button onclick="setCustomTime()">設定</button>
+</div>
+
+<div>
+  釣果音:
+  <label class="switch">
+    <input type="checkbox" id="sound-toggle" checked>
+    <span class="slider"></span>
+  </label>
+</div>
+
+<div id="timer">00:00</div>
+
+<div>
+  <button onclick="startTimer()">スタート</button>
+  <button onclick="pauseTimer()">一時停止</button>
+  <button onclick="resetTimer()">リセット</button>
+</div>
+
+<div id="animation-area"></div>
+<div id="fish-log"></div>
+
+<h2>コレクション</h2>
+<div id="collection"></div>
+
+<!-- 音声 -->
+<audio id="ding-sound" src="C:\Users\user\Desktop\timer\sounds\nomal.mp3"></audio>
+<audio id="poom-sound" src="C:\Users\user\Desktop\timer\sounds\rare.mp3"></audio>
+<audio id="rare-sound" src="C:\Users\user\Desktop\timer\sounds\super-rare.mp3"></audio>
+
+<script>
+// タイマー
+let totalSeconds = 0, remainingSeconds = 0, timerInterval = null, elapsedSeconds = 0;
+
+// 絵文字
+const normalFood = [{icon:"🍎", rarity:"normal"}, {icon:"🍌", rarity:"normal"}, {icon:"🍰", rarity:"normal"}, {icon:"🍟", rarity:"normal"}, {icon:"🍩", rarity:"normal"}];
+const rareFood = [{icon:"💎", rarity:"rare"}, {icon:"🍣", rarity:"rare"}, {icon:"🥂", rarity:"rare"}, {icon:"🍤", rarity:"rare"}];
+const superRareFood = [{icon:"👑", rarity:"super-rare"}, {icon:"🛸", rarity:"super-rare"}, {icon:"🌟", rarity:"super-rare"}, {icon:"💫", rarity:"super-rare"}];
+
+const timerDisplay = document.getElementById("timer");
+const fishLog = document.getElementById("fish-log");
+const animationArea = document.getElementById("animation-area");
+const collectionDiv = document.getElementById("collection");
+const soundToggle = document.getElementById("sound-toggle");
+
+// コレクション保存
+let collection = [];
+const saved = localStorage.getItem("fishCollection");
+if(saved){ collection = JSON.parse(saved); updateCollectionUI(); }
+
+// 音再生
+function playSound(id, volume=1.0){
+  const sound = document.getElementById(id);
+  if(sound){ sound.currentTime=0; sound.volume=volume; sound.play(); }
+}
+
+// タイマー表示
+function updateDisplay(){
+  const min = String(Math.floor(remainingSeconds/60)).padStart(2,'0');
+  const sec = String(remainingSeconds%60).padStart(2,'0');
+  timerDisplay.textContent=`${min}:${sec}`;
+}
+
+function setTime(minutes){ totalSeconds=minutes*60; remainingSeconds=totalSeconds; elapsedSeconds=0; updateDisplay(); }
+function setCustomTime(){
+  const input = parseInt(document.getElementById("custom-time").value);
+  if(!isNaN(input)&&input>0){ setTime(input); } else { alert("1分以上を入力してください"); }
+}
+
+function startTimer(){
+  if(timerInterval) return;
+  timerInterval=setInterval(()=>{
+    if(remainingSeconds>0){
+      remainingSeconds--; elapsedSeconds++; updateDisplay();
+      if(elapsedSeconds%120===0) catchFish();
+    } else {
+      clearInterval(timerInterval); timerInterval=null;
+      playSound("ding-sound");
+      alert("時間終了！");
+    }
+  },1000);
+}
+function pauseTimer(){ clearInterval(timerInterval); timerInterval=null; }
+function resetTimer(){ clearInterval(timerInterval); timerInterval=null; remainingSeconds=totalSeconds; elapsedSeconds=0; updateDisplay(); }
+
+// コレクションUI
+function updateCollectionUI(){
+  collectionDiv.innerHTML="";
+  collection.forEach(f=>{
+    const div=document.createElement("div");
+    div.textContent=f.icon; div.className="collection-item "+f.rarity;
+    collectionDiv.appendChild(div);
+  });
+}
+
+// 進行度
+function getProgress(){ return Math.min(elapsedSeconds/totalSeconds,1); }
+function getFishByProgress(progress){
+  let pool=[];
+  if(progress<0.3){ pool=normalFood; }
+  else if(progress<0.7){ pool=normalFood.concat(rareFood); }
+  else{ pool=normalFood.concat(rareFood, superRareFood); }
+
+  const weighted=[];
+  pool.forEach(f=>{
+    let w=0;
+    switch(f.rarity){
+      case"normal": w=70; break;
+      case"rare": w=25+progress*25; break;
+      case"super-rare": w=5+progress*5; break;
+    }
+    for(let i=0;i<w;i++) weighted.push(f);
+  });
+  return weighted[Math.floor(Math.random()*weighted.length)];
+}
+
+// アニメーション
+function animateFish(fish, progress){
+  const fly=document.createElement("div"); fly.textContent=fish.icon;
+  fly.className="fish-fly "+fish.rarity;
+  fly.style.left=10+Math.random()*80+"%";
+
+  const maxH=150+progress*300;
+  const maxS=1+progress*1.5;
+  const rotate=(Math.random()-0.5)*360*progress;
+
+  const styleSheet=document.styleSheets[0];
+  const name=`fly${Date.now()}`;
+  const keyframes=`@keyframes ${name} { 0%{transform:translateY(0) scale(1) rotate(0deg);opacity:1;} 50%{transform:translateY(-${maxH/2}px) scale(${maxS/2}) rotate(${rotate/2}deg);opacity:0.8;} 100%{transform:translateY(-${maxH}px) scale(${maxS}) rotate(${rotate}deg);opacity:0;} }`;
+  styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
+  fly.style.animation=`${name} 3s forwards`;
+
+  animationArea.appendChild(fly);
+  setTimeout(()=>{fly.remove();},3000);
+}
+
+// 釣果
+function catchFish(){
+  const fish=getFishByProgress(getProgress());
+  const logDiv=document.createElement("div");
+  logDiv.textContent=`🎣 ${fish.icon}が釣れました！`;
+  fishLog.appendChild(logDiv);
+
+  if(!collection.some(c=>c.icon===fish.icon)){
+    collection.push(fish);
+    localStorage.setItem("fishCollection",JSON.stringify(collection));
+    alert(`NEW! ${fish.icon}をコレクションに追加！`);
+    updateCollectionUI();
+  }
+
+  animateFish(fish,getProgress());
+
+  if(soundToggle.checked){
+    if(fish.rarity==="normal") playSound("C:\\Users\\user\\Desktop\\timer\\sounds\\nomal.mp3",0.5);
+    if(fish.rarity==="rare") playSound("C:\\Users\\user\\Desktop\\timer\\sounds\\rare.mp3",0.8);
+    if(fish.rarity==="super-rare") playSound("C:\\Users\\user\\Desktop\\timer\\sounds\\super-rare.mp3",1.0);
+  }
+}
+</script>
+</body>
+</html>
