@@ -3,6 +3,8 @@
 ## Demo
 https://sct202509kato.github.io/pomodoro-fishing-timer/
 
+![トップ画面](screenshots/top.png)
+
 ## 概要
 作業に集中するためのポモドーロタイマーです。  
 一定時間（2分）ごとに魚が釣れるミニゲーム要素を追加し、
