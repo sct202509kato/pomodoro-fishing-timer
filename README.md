@@ -1,5 +1,5 @@
 ![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-brightgreen)
-# Pomodoro Timer with Fishing Mini Game
+# ポモドーロタイマー＆釣りのミニゲーム
 ![トップ画面](screenshots/top.png)
 
 ## Demo
